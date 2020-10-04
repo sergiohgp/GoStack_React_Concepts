@@ -1,54 +1,79 @@
-import React from 'react';
+import React, { useState, FormEvent } from 'react';
 import { FiChevronRight } from 'react-icons/fi';
 
+import api from '../../services/api';
 import logoImg from '../../assets/logo.svg';
 
-import { DashboardTitle, Form, Repositories } from './styles';
+import { DashboardTitle, Form, Repositories, Error } from './styles';
+import Repository from '../Repository';
+
+interface Repository {
+  full_name: string;
+  description: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  }
+}
 
 const Dashboard: React.FC = () => {
+  const [newRepo, setNewRepo] = useState('');
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [inputError, setInputError] = useState('');
+
+  async function handleAddRepository(e: FormEvent<HTMLFormElement>): Promise<void> {
+    e.preventDefault();
+
+    if (!newRepo) {
+      setInputError("Enter the repository's author/name");
+      return;
+    }
+    try {
+      const response = await api.get<Repository>(`repos/${newRepo}`);
+
+      const repository = response.data;
+
+      setRepositories([...repositories, repository]);
+      setNewRepo('');
+      setInputError('');
+    } catch (err) {
+      setInputError("Repository does not exist");
+    }
+  }
+
   return (
     <>
       <img src={logoImg} alt="Github Explorer" />
       <DashboardTitle>Explore repositories on Github</DashboardTitle>
 
-      <Form action="">
-        <input type="text" placeholder="Repository name" />
+      <Form hasError={!!inputError} onSubmit={handleAddRepository}>
+        <input
+          value={newRepo}
+          onChange={(e) => setNewRepo(e.target.value)}
+          placeholder="Repository name"
+        />
         <button type="submit">Search</button>
       </Form>
 
+      {inputError && <Error>{inputError}</Error>}
+
       <Repositories>
-        <a href="test">
-          <img src="https://avatars0.githubusercontent.com/u/54996062?s=460&u=aaf5a4a3287c87691cab70e3c51ff5ffe7421154&v=4"
-            alt="Sergio Pereira" />
-          <div>
-            <strong>sergiohgp/GoBarber</strong>
-            <p>Easy peasy highly scalable NodeJS & TypeScript application</p>
-          </div>
 
-          <FiChevronRight size={20} />
-        </a>
+        {repositories.map(repository => (
+          <a key={repository.full_name} href="test">
+            <img
+              src={repository.owner.avatar_url}
+              alt={repository.owner.login}
+            />
+            <div>
+              <strong>{repository.full_name}</strong>
+              <p>{repository.description}</p>
+            </div>
 
-        <a href="test">
-          <img src="https://avatars0.githubusercontent.com/u/54996062?s=460&u=aaf5a4a3287c87691cab70e3c51ff5ffe7421154&v=4"
-            alt="Sergio Pereira" />
-          <div>
-            <strong>sergiohgp/GoBarber</strong>
-            <p>Easy peasy highly scalable NodeJS & TypeScript application</p>
-          </div>
+            <FiChevronRight size={20} />
+          </a>
+        ))}
 
-          <FiChevronRight size={20} />
-        </a>
-
-        <a href="test">
-          <img src="https://avatars0.githubusercontent.com/u/54996062?s=460&u=aaf5a4a3287c87691cab70e3c51ff5ffe7421154&v=4"
-            alt="Sergio Pereira" />
-          <div>
-            <strong>sergiohgp/GoBarber</strong>
-            <p>Easy peasy highly scalable NodeJS & TypeScript application</p>
-          </div>
-
-          <FiChevronRight size={20} />
-        </a>
       </Repositories>
     </>
   );
